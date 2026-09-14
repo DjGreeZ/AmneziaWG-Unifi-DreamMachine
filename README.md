@@ -1,6 +1,6 @@
-# AmneziaWG для UniFi Dream Machine
+# AmneziaWG 3.1 для UniFi Dream Machine
 
-Подключение к AmneziaWG 3.1 через штатную панель UniFi. В разделе **VPN Client** появляется тип **AmneziaWG**: загрузите конфигурацию, создайте туннель и выбирайте его в политиках маршрутизации UniFi. Никаких отдельных панелей!
+Интеграция подключения AmneziaWG 3.1 через штатную панель UniFi. В разделе **VPN Client** появляется тип **AmneziaWG**: загрузите конфигурацию, создайте туннель и выбирайте его в политиках маршрутизации UniFi. Никаких отдельных панелей!
 
 Developed by [Roman Tselischev](https://vk.com/greez).
 
