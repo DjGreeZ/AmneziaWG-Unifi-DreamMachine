@@ -11,10 +11,18 @@ if not m:
     raise SystemExit('Supported hardware: UDM al324 only.')
 if tuple(map(int, m.groups())) < (5, 1, 33):
     raise SystemExit('UniFi OS 5.1.33 or newer is required.')
-network = subprocess.check_output(['dpkg-query', '-W', '-f=${Version}', 'unifi'], text=True).strip()
+network = None
+for package in ('unifi-native', 'unifi'):
+    result = subprocess.run(['dpkg-query', '-W', '-f=${Status}\t${Version}', package], text=True, capture_output=True)
+    status, separator, version = result.stdout.strip().partition('\t')
+    if result.returncode == 0 and separator and status == 'install ok installed':
+        network = version
+        break
+if network is None:
+    raise SystemExit('Installed UniFi Network package (unifi-native or unifi) not found.')
 n = re.match(r'(?:\d+:)?(\d+)\.(\d+)\.(\d+)(?:[-+~.]|$)', network)
 if not n or tuple(map(int, n.groups())) < (10, 6, 101):
-    raise SystemExit('UniFi Network 10.6.101 or newer is required.')
+    raise SystemExit('UniFi Network 10.6.101 or newer is required; detected: ' + network)
 print('Version requirements met. Tested on OS 5.1.33 / Network 10.6.101; newer versions are allowed.')
 PYVERSION
 [ "$(uname -m)" = aarch64 ] || exit 1
