@@ -2,8 +2,11 @@
 import hashlib,json,subprocess,re
 from pathlib import Path
 ROOT=Path('/data/awg-native')
-version=subprocess.check_output(['dpkg-query','-W','-f=${Version}','unifi-native'],text=True).strip()
-if version!='10.6.101-35991-1':raise SystemExit('Unsupported Network build; patch left untouched')
+from compatibility import check_system
+try:
+    check_system()
+except (ValueError, OSError) as error:
+    raise SystemExit(str(error))
 manifest=json.loads((ROOT/'manifest.json').read_text())
 for item in manifest:
     path=Path(item['target'])

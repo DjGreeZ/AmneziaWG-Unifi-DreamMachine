@@ -25,7 +25,7 @@ sh "$TMP/install.sh" "$@"
 exit 0
 __AWG_PAYLOAD__
 '''.replace('DIGEST',digest)
-p=out/'AmneziaWG-UniFi-v0.2.0.run';p.write_bytes(script.encode()+data);p.chmod(0o755)
-(out/'AmneziaWG-UniFi-v0.2.0.sha256').write_text(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n')
-(out/'AmneziaWG-UniFi-v0.2.0-source.tar.gz').write_bytes(data)
+p=out/'AmneziaWG-UniFi-v0.2.1.run';p.write_bytes(script.encode()+data);p.chmod(0o755)
+(out/'AmneziaWG-UniFi-v0.2.1.sha256').write_text(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n')
+(out/'AmneziaWG-UniFi-v0.2.1-source.tar.gz').write_bytes(data)
 print('Built',p.name,p.stat().st_size,'bytes')

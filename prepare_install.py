@@ -3,12 +3,12 @@ import hashlib,json,re,subprocess,sys
 from pathlib import Path
 root=Path('/data/awg-native'); package=Path(__file__).resolve().parent
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
-firmware=Path('/usr/lib/version').read_text().strip()
-if not re.match(r'UDM\.al324\.v5\.1\.33(?:\.|$)',firmware):
-    raise SystemExit('Требуется UDM al324 / UniFi OS 5.1.33. Другие версии не проверены.')
-v=subprocess.check_output(['dpkg-query','-W','-f=${Status}\t${Version}','unifi-native'],text=True).strip()
-if v!='install ok installed\t10.6.101-35991-1':
-    raise SystemExit('Требуется UniFi Network 10.6.101, сборка 35991-1.')
+from compatibility import check_system
+try:
+    os_version, network_version = check_system()
+except (ValueError, OSError) as error:
+    raise SystemExit(str(error))
+print(f'Версии подходят: OS {os_version} / Network {network_version}. Модель устройства не ограничивается; совместимость интерфейса проверяется отдельно.')
 manifest=json.loads((package/'manifest.json').read_text())
 for item in manifest:
     target=Path(item['target']);backup=root/'backup'/item['source']

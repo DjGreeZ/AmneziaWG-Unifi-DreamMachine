@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-printf '\n  AmneziaWG · UniFi Dream Machine · v0.2.0\n  Developed by Roman Tselischev / https://vk.com/greez\n\n'
+printf '\n  AmneziaWG · UniFi Dream Machine · v0.2.1\n  Developed by Roman Tselischev / https://vk.com/greez\n\n'
 printf '  Экспериментальная интеграция. Используйте на свой страх и риск.\n  Обновления UniFi OS и Network не проверены и не рекомендуются.\n\n'
 [ "$(id -u)" = 0 ] || { echo 'Запустите установщик от root.'; exit 1; }
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -23,7 +23,7 @@ python3 "$HERE/prepare_install.py"
 systemctl stop awg-native-maintain.timer awg-native-maintain.service awg-native.service 2>/dev/null || true
 mkdir -p "$ROOT/bin"
 install -m 755 "$HERE/bin/awg" "$HERE/bin/amneziawg-go" "$ROOT/bin/"
-for file in service.py maintain.py uninstall.py uninstall.sh; do install -m 700 "$HERE/$file" "$ROOT/$file"; done
+for file in compatibility.py service.py maintain.py uninstall.py uninstall.sh; do install -m 700 "$HERE/$file" "$ROOT/$file"; done
 for file in route.conf cache-loader.js refresh.html; do install -m 644 "$HERE/$file" "$ROOT/$file"; done
 for name in bridge client; do
  if [ ! -f "$ROOT/$name.key" ]; then wg genkey > "$ROOT/$name.key"; fi
