@@ -162,16 +162,23 @@ AUTH=json.loads((ROOT/'auth.json').read_text())
 def password_ok(p):return hmac.compare_digest(hashlib.pbkdf2_hmac('sha256',p.encode(),bytes.fromhex(AUTH['salt']),200000).hex(),AUTH['hash'])
 class Handler(BaseHTTPRequestHandler):
     def log_message(self,*args):pass
-    def send(self,body,code=200,ctype='text/html; charset=utf-8',cookie=None,download=None):
+    def send(self,body,code=200,ctype='text/html; charset=utf-8',cookie=None,download=None,location=None,refresh=None):
         data=body if isinstance(body,bytes) else body.encode();self.send_response(code)
         self.send_header('Content-Type',ctype);self.send_header('Content-Length',str(len(data)))
         self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff')
         self.send_header('X-Frame-Options','DENY');self.send_header('Referrer-Policy','same-origin')
         self.send_header('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'")
+        if location:self.send_header('Location',location)
+        if refresh:self.send_header('Refresh',refresh)
         if cookie:self.send_header('Set-Cookie',cookie)
         if download:self.send_header('Content-Disposition','attachment; filename="'+download+'"')
         self.end_headers();self.wfile.write(data)
     def page(self,body,code=200,cookie=None):self.send('<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>AWG Manager</title><style>'+STYLE+'</style><main><h1>AWG Manager</h1><p class="muted">Dream Machine · AmneziaWG 3.1</p>'+body+'<footer class="muted">Developed by <a href="https://vk.com/greez" target="_blank" rel="noopener noreferrer">Roman Tselischev</a></footer></main></html>',code,cookie=cookie)
+    def send_header_refresh_page(self,s):
+        body='<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Проверка AWG</title><style>'+STYLE+'</style><main><h1>AWG Manager</h1><section><h2>Проверяем подключение…</h2><p>'+html.escape(s['message'])+'</p><p class="muted">Результат появится автоматически. Обычно проверка занимает до 20 секунд; восстановление прежнего соединения может занять дольше.</p></section><footer>Developed by <a href="https://vk.com/greez" target="_blank" rel="noopener noreferrer">Roman Tselischev</a></footer></main></html>'
+        return self.send(body,refresh='2; url=/')
+    def redirect(self,cookie=None):
+        return self.send('',303,cookie=cookie,location='/')
     def session(self):
         for part in self.headers.get('Cookie','').split(';'):
             if part.strip().startswith('awgm='):
@@ -188,9 +195,12 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/status':return self.send(json.dumps(STATE),ctype='application/json')
         if path!='/':return self.page('Страница не найдена',404)
         s=STATE.copy();good=s['phase']=='active';csrf=html.escape(sess['csrf'])
+        if JOB.locked():
+            self.send_header_refresh_page(s)
+            return
         configured=(ROOT/'active.conf').exists()
         if not configured:
-            return self.page('<section><h2>Настройка VPN</h2><p>'+html.escape(s['message'])+'</p><form action="/upload" method="post" enctype="multipart/form-data"><input type="hidden" name="csrf" value="'+csrf+'"><label>Конфиг AmneziaWG (.conf)</label><input type="file" name="config" accept=".conf" required><button>Загрузить и проверить</button></form><p>После успешной проверки здесь появится конфиг для импорта в UniFi VPN Client.</p><a href="/">Проверить результат</a></section>')
+            return self.page('<section><h2>Настройка VPN</h2><p>'+html.escape(s['message'])+'</p><form action="/upload" method="post" enctype="multipart/form-data"><input type="hidden" name="csrf" value="'+csrf+'"><label>Конфиг AmneziaWG (.conf)</label><input type="file" name="config" accept=".conf" required><button>Загрузить и проверить</button></form><p>После успешной проверки здесь появится конфиг для импорта в UniFi VPN Client.</p></section>')
         self.page('<section><h2 class="'+('good' if good else 'bad')+'">'+('Подключён' if good else 'Проверка / нет соединения')+'</h2><p>'+html.escape(s['message'])+'</p><p>Внешний IP: <code>'+html.escape(s['ip'] or '—')+'</code></p><a href="/">Обновить статус</a></section><section><h2>Заменить конфиг AWG</h2><p>Профиль UniFi и его политики сохранятся. При неудачном подключении вернётся прежний конфиг.</p><form action="/upload" method="post" enctype="multipart/form-data"><input type="hidden" name="csrf" value="'+csrf+'"><input type="file" name="config" accept=".conf" required><button>Загрузить и проверить</button></form><small class="muted">Во время проверки возможен краткий перерыв. Эта версия обслуживает один профиль и IPv4.</small></section><section><h2>Профиль для UniFi</h2><p>Импортируйте этот файл один раз в VPN Client. Для замены AWG используйте форму выше.</p><a class="button" href="/unifi.conf">Скачать конфиг UniFi</a><p class="muted">DNS в политиках настраивается отдельно. Поле DNS из AWG-файла не меняет настройки вашей сети.</p></section>')
     def do_POST(self):
         if self.headers.get('Origin') and self.headers['Origin']!='https://'+self.headers.get('Host',''):return self.page('Запрос отклонён',403)
@@ -204,7 +214,7 @@ class Handler(BaseHTTPRequestHandler):
             p=parse_qs(data.decode()).get('password',[''])[0]
             if not password_ok(p):ATTEMPTS[ip]=recent+[now];return self.page('Неверный пароль. <a href="/">Повторить</a>',403)
             token=secrets.token_urlsafe(32);SESSIONS[token]={'expires':now+3600,'csrf':secrets.token_urlsafe(24)}
-            return self.page('<section>Вход выполнен. <a href="/">Открыть менеджер</a></section>',cookie='awgm='+token+'; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600')
+            return self.redirect(cookie='awgm='+token+'; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600')
         sess=self.session()
         if not sess:return self.page('Войдите в менеджер',401)
         if path!='/upload':return self.page('Страница не найдена',404)
@@ -217,13 +227,13 @@ class Handler(BaseHTTPRequestHandler):
             text=fields['config'].decode('utf-8-sig');parse(text)
         except ValueError as e:return self.page(html.escape(str(e))+' <a href="/">Назад</a>',400)
         except Exception:return self.page('Не удалось прочитать файл конфигурации.',400)
-        state(phase='testing',message='Новый конфиг принят. Проверка подключения.')
         if not JOB.acquire(False):return self.page('Дождитесь завершения текущей проверки.',409)
+        state(phase='testing',message='Новый конфиг принят. Проверка подключения.')
         def task():
             try:activate(text)
             finally:JOB.release()
         threading.Thread(target=task,daemon=True).start()
-        self.page('<section><h2>Проверяем подключение</h2><p>Обычно это занимает до 20 секунд. После успешной проверки можно скачать профиль UniFi. Если ранее был рабочий конфиг, при ошибке он восстановится.</p><a href="/">Проверить результат</a></section>',202)
+        self.redirect()
 
 if __name__=='__main__':
     os.umask(0o077)

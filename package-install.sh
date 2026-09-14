@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
-echo "Developed by Roman Tselischev / https://vk.com/greez"
+printf '\n  AWG MANAGER  ·  v0.1.1\n  AmneziaWG для UniFi Dream Machine\n  Developed by Roman Tselischev / https://vk.com/greez\n\n'
+step() { printf '\n  [%s/5] %s\n' "$1" "$2"; }
+step 1 'Проверка совместимости'
 [ "$(id -u)" = 0 ] || { echo 'Run as root.'; exit 1; }
 python3 - <<'PYVERSION'
 import re, subprocess
@@ -35,12 +37,15 @@ if [ ! -f "$ROOT/manager.py" ]; then
  if ss -lntu | grep -Eq ':(51899|8449)[[:space:]]'; then echo 'A required port is occupied; aborting.'; exit 1; fi
 fi
 mkdir -p "$ROOT/bin"
+step 2 'Пароль менеджера'
 python3 "$HERE/setup_auth.py"
 if [ -f "$ROOT/manager.py" ]; then cp "$ROOT/manager.py" "$ROOT/manager.previous.py"; fi
+step 3 'Установка компонентов'
 systemctl stop awg-manager.service 2>/dev/null || true
 install -m 755 "$HERE/bin/awg" "$HERE/bin/amneziawg-go" "$ROOT/bin/"
 install -m 700 "$HERE/manager.py" "$ROOT/manager.py"
 install -m 700 "$HERE/uninstall.sh" "$ROOT/uninstall.sh"
+step 4 'Настройка локального подключения'
 if [ ! -f "$ROOT/settings.env" ]; then
  ADDR=$(ip -4 -o addr show dev br0 | awk 'NR==1 {split($4,a,"/");print a[1]}')
  [ -n "$ADDR" ] || { echo 'LAN address on br0 not found.'; exit 1; }
@@ -78,8 +83,12 @@ UMask=0077
 [Install]
 WantedBy=multi-user.target
 UNIT
+step 5 'Запуск менеджера'
 systemctl daemon-reload
 systemctl enable --now awg-manager.service
-printf 'AWG Manager installed: https://%s:%s/\n' "$AWGM_BIND_ADDRESS" "$AWGM_PORT"
-echo 'Sign in with your manager password.'
-echo 'Open the manager, upload your AWG config, then download and import the UniFi profile. Keep Kill Switch enabled on VPN policies.'
+printf '\n  ГОТОВО — AWG Manager установлен\n\n  Открыть: https://%s:%s/\n\n' "$AWGM_BIND_ADDRESS" "$AWGM_PORT"
+echo '  1. Войдите с паролем менеджера.'
+echo '  2. Загрузите AWG-конфиг и дождитесь проверки.'
+echo '  3. Скачайте профиль и импортируйте его в UniFi VPN Client.'
+echo '  При обновлении существующие пароль и конфиг сохраняются.'
+printf '\n'

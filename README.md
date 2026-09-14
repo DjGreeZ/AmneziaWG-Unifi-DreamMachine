@@ -1,4 +1,4 @@
-# AWG Manager — UDM prototype 0.1
+# AWG Manager — UDM prototype 0.1.1
 
 Requires UDM al324, UniFi OS >= 5.1.33 and Network >= 10.6.101.
 Newer versions are allowed; tested on OS 5.1.33 / Network 10.6.101.
@@ -16,6 +16,8 @@ Or download and run the self-extracting installer:
 
     sh AWG-Manager-UDM-5.1.33.run
 
+After login the dashboard opens directly. Uploads show their result automatically.
+
 Existing keys, active configuration and password are preserved on updates.
 
 The manager is served via HTTPS on the br0 IPv4 address, port 8449. Its certificate
@@ -26,7 +28,7 @@ is stored. Existing installations retain their password.
 After installation, open the manager and upload your first AWG .conf. The manager
 checks the connection; after success, download the UniFi profile. If the first
 check fails, correct the config and upload again. No config is required by the installer.
-All AWG binaries are bundled; a public download command needs a published release URL.
+All AWG binaries are bundled. The downloader uses a fixed release tag so the package and checksum always match.
 
 Import the generated UniFi WireGuard config once, then configure routing policies
 in UniFi. Replacing the AWG config through the manager preserves the local profile.
