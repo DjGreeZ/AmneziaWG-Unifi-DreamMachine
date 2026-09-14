@@ -1,0 +1,31 @@
+[
+  {
+    "target": "/usr/lib/unifi/webapps/ROOT/app-unifi/react/js/94924.70c7742fc8b69f7ab986.js",
+    "source": "frontend.js",
+    "allowed": [
+      "a4dabcd2026609c957728b609fb286a8da3317618425afab6d272ff4df59e0d1",
+      "809714c440e8e8d90601b4606be58d9b5824df1c97c6d7cc007776982b8feda0",
+      "9d879c8ec4fd3d2c1a41bd5fc59af6b07697bb11542dea7220cd6b20189c7ab6",
+      "cc6899b9e5b38bfad893c87b1fbd01ea7788904418d7d5b4eb55f283a7b06eb3"
+    ],
+    "original": "a4dabcd2026609c957728b609fb286a8da3317618425afab6d272ff4df59e0d1"
+  },
+  {
+    "target": "/usr/lib/unifi/webapps/ROOT/app-unifi/react/js/settings.c9b2a0ee0544312b21d4.js",
+    "source": "settings.js",
+    "allowed": [
+      "853ea1ef0976cdc0f0c6cfe41a84ca7264d3b4455ee8cf308f367bc0e567d521",
+      "7dad476ec39ea1db7be557e9f5b6c375114d7b2de3aa5d43d7456b51515164ca"
+    ],
+    "original": "853ea1ef0976cdc0f0c6cfe41a84ca7264d3b4455ee8cf308f367bc0e567d521"
+  },
+  {
+    "target": "/usr/share/unifi-core/app/node_modules/@ubnt/unifi-portal/dist/local/index.html",
+    "source": "portal-index.html",
+    "allowed": [
+      "da17cdbaa7b06aa504710bd29763cec94c79ccc439d003bb7ef7e5269866fe81",
+      "9761f4e4f436c27c077a3f51ba9871b18f61efe038cc10012fa3f4669b3613e1"
+    ],
+    "original": "da17cdbaa7b06aa504710bd29763cec94c79ccc439d003bb7ef7e5269866fe81"
+  }
+]

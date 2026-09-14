@@ -1,63 +1,104 @@
-# AWG Manager — UDM prototype 0.1.1
+# AmneziaWG для UniFi Dream Machine
 
-Requires UDM al324, UniFi OS >= 5.1.33 and Network >= 10.6.101.
-Newer versions are allowed; tested on OS 5.1.33 / Network 10.6.101.
+Подключение к AmneziaWG через штатную панель UniFi Network. В разделе **VPN Client** появляется тип **AmneziaWG**: загрузите конфигурацию, создайте туннель и выбирайте его в политиках маршрутизации UniFi. Отдельная панель управления и дополнительный пароль не нужны.
 
-Developed by Roman Tselischev / https://vk.com/greez
-One AWG profile, IPv4 routing. This is an experimental release.
+Developed by [Roman Tselischev](https://vk.com/greez).
 
-Install over SSH as root (no AWG config required):
+> **Экспериментальный проект. Все действия — на ваш страх и риск.** Установка изменяет системные файлы UniFi и может привести к потере сетевого доступа или необходимости восстановления устройства. Перед установкой сохраните резервную копию UniFi и обеспечьте физический доступ к UDM.
+>
+> **Обновления UniFi OS и UniFi Network не тестировались. Обновляться не рекомендуется.** Перед использованием отключите автоматическое обновление обеих систем. Сохранность интеграции, работа туннеля и удаление после обновления не гарантируются.
+
+## Совместимость
+
+Проверено на **UniFi Dream Machine (UDM, al324, ARM64)**:
+
+| Компонент | Проверенная версия |
+| --- | --- |
+| UniFi OS | **5.1.33** |
+| UniFi Network | **10.6.101** (`unifi-native 10.6.101-35991-1`) |
+
+Установщик проверяет модель, точные версии и контрольные суммы изменяемых файлов. Неизвестные сборки не поддерживаются автоматически. UDM Pro, SE, другие устройства и другие версии не проверены.
+
+Поддерживаются **один AWG-профиль и IPv4**. Нужны доступ по SSH от `root`, доступ UDM в интернет и рабочий конфиг AmneziaWG с одним `[Interface]` и одним `[Peer]`. Установщик не запрашивает конфиг: он загружается позже в UniFi.
+
+## Принцип работы
+
+Трафик проходит по цепочке:
+
+**Устройство → политика UniFi → локальный WireGuard → AmneziaWG → VPN-сервер → интернет.**
+
+Интеграция добавляет выбор AmneziaWG и обработку конфигурации в интерфейс UniFi. При сохранении профиля служба проверяет AWG-подключение и передаёт UniFi конфигурацию локального WireGuard-переходника. Штатный механизм UniFi управляет этим локальным подключением и политиками маршрутизации; отдельный движок AmneziaWG передаёт трафик внешнему серверу. Внутри UniFi профиль остаётся WireGuard, а в панели отображается как AmneziaWG.
+
+Служба следит за включением, выключением и удалением профиля. При неудачной замене AWG-конфига она пытается восстановить предыдущий. Проверка связи выполняется через HTTPS-запрос к `1.1.1.1` внутри VPN. При повторных ошибках переходник отключается; статус в UniFi может измениться с задержкой. **Established относится к локальному WireGuard-подключению и сам по себе не гарантирует доступность внешнего AWG-сервера.**
+
+### Что устанавливается
+
+- Файлы интеграции и движки `amneziawg-go` / `awg` в `/data/awg-native`.
+- Служба `awg-native.service` и таймер `awg-native-maintain.timer` для восстановления интеграции после перегенерации конфигурации UniFi.
+- Локальные изменения двух модулей интерфейса Network и страницы загрузки UniFi; исходные файлы сохраняются в `/data/awg-native/backup`.
+- Маршрут API в nginx с использованием существующей авторизации администратора UniFi. Отдельного сетевого порта для управления нет.
+- Локальные ключи WireGuard, переходник и изолированное сетевое пространство для передачи трафика через AWG.
+
+Зарезервированы `10.254.252.0/30`, локальный UDP-порт `51899`, пространство `awgm` и интерфейсы `awgbridge0` / `awgmout0`. Они не должны использоваться другими приложениями. Исходный `/usr/bin/wg` не заменяется. AWG-конфиги и закрытые ключи хранятся локально с доступом только для root.
+
+## Установка
+
+1. Сохраните резервную копию UniFi. Отключите автоматические обновления OS и Network.
+2. Подключитесь по SSH к UDM от `root`.
+3. Выполните:
 
 ```sh
-curl -fL https://raw.githubusercontent.com/DjGreeZ/AmneziaWG-Unifi-DreamMachine/main/install.sh -o /tmp/awg-install.sh && sh /tmp/awg-install.sh
+curl -fL https://raw.githubusercontent.com/DjGreeZ/AmneziaWG-Unifi-DreamMachine/v0.2.0/install.sh -o /tmp/awg-install.sh && sh /tmp/awg-install.sh
 ```
 
-Or download and run the self-extracting installer:
+Команда скачает пакет фиксированной версии, проверит SHA-256 и установит компоненты. Сборка программ на UDM не требуется. Если проверка совместимости не прошла, не обходите её.
 
-    sh AWG-Manager-UDM-5.1.33.run
+Если установлена отдельная панель AWG Manager, сначала удалите её собственным uninstall-скриптом и удалите связанный профиль/политики в UniFi.
 
-After login the dashboard opens directly. Uploads show their result automatically.
+## Использование
 
-Existing keys, active configuration and password are preserved on updates.
+1. Откройте обычную панель UniFi Network с правами администратора и обновите страницу.
+2. Перейдите в **Settings → VPN → VPN Client → Create New**.
+3. Выберите **AmneziaWG**, задайте имя и загрузите оригинальный AWG-файл `.conf`.
+4. Нажмите **Create** и дождитесь проверки подключения.
+5. Создайте политику маршрутизации для нужных устройств или сетей, выбрав созданный туннель. **Включите Kill Switch**, чтобы при недоступности VPN трафик этой политики не переходил напрямую в WAN.
+6. Проверьте внешний IP и доступ к интернету именно с устройства, на которое действует политика.
 
-The manager is served via HTTPS on the br0 IPv4 address, port 8449. Its certificate
-is self-signed. A fresh install prompts in the SSH terminal for a password
-(at least 12 characters) and confirmation. Input is hidden; only a salted hash
-is stored. Existing installations retain their password.
+Включение и выключение выполняются в UniFi. Для замены конфигурации откройте профиль, нажмите на имя файла под названием профиля, выберите новый AWG-конфиг и сохраните изменения. После обработки имя файла может отображаться как `amneziawg-native.conf` — это локальный профиль, используемый UniFi.
 
-After installation, open the manager and upload your first AWG .conf. The manager
-checks the connection; after success, download the UniFi profile. If the first
-check fails, correct the config and upload again. No config is required by the installer.
-All AWG binaries are bundled. The downloader uses a fixed release tag so the package and checksum always match.
+Удаление профиля в UniFi останавливает подключение, но не удаляет сохранённый AWG-конфиг с UDM.
 
-Import the generated UniFi WireGuard config once, then configure routing policies
-in UniFi. Replacing the AWG config through the manager preserves the local profile.
-A failing candidate is rolled back. Keep UniFi Kill Switch enabled. DNS from the
-AWG file is not applied to the LAN; generated UniFi config specifies 1.1.1.1.
+### Ограничения
 
-Architecture: the native UniFi WG client connects over 127.0.0.1:51899 to a kernel
-WG server whose interface lives in a dedicated network namespace. That namespace
-routes and NATs traffic through the AWG TUN. The AWG UDP socket remains in the
-root namespace. No native wg binary or UniFi web assets are replaced.
+- IPv6 через VPN не поддерживается; правила IPv4 не обеспечивают защиту IPv6-трафика.
+- DNS из AWG-файла не переносится в настройки локальной сети. Локальный профиль использует `1.1.1.1`; DNS для клиентов настраивается средствами UniFi.
+- Для проверки связи `AllowedIPs` должен включать `1.1.1.1` (например, `0.0.0.0/0`).
+- Интеграция не добавляет новый протокол в закрытый серверный код UniFi и не является официальным расширением Ubiquiti.
+- Работа зависит от конкретной версии интерфейса и системы. Обновления OS/Network не проверены и не рекомендуются.
 
-Health checks send an HTTPS request to 1.1.1.1 through AWG every 15 seconds. Two
-consecutive failures lower the bridge; native UniFi status may lag. The manager
-shows the external connection status. Restarting a failed engine is automatic.
+## Удаление
 
-Reserved resources: namespace awgm, interfaces awgbridge0 and awgmout0,
-10.254.252.0/30, root UDP port 51899, LAN TCP port 8449. Ensure these are unused.
+Сначала удалите или перенастройте связанные политики и VPN-профиль в панели UniFi. Затем выполните по SSH:
 
-Removal:
+```sh
+sh /data/awg-native/uninstall.sh
+```
 
-    sh /data/awg-manager/uninstall.sh
+Службы и таймер удаляются, исходные файлы интерфейса восстанавливаются, маршрут API и сетевое пространство удаляются. Конфиги, ключи и резервные копии остаются в `/data/awg-native`.
 
-Configurations/keys are retained. The associated native UniFi profile and policies
-are not deleted. Persistence across UniFi OS upgrades and a fresh-device install
-have not been tested. Service restart, config replacement, failed-candidate rollback,
-engine recovery, a full UDM reboot (confirmed by the user), and end-to-end traffic have been tested on the development UDM.
+Для **полного удаления, включая конфиги, ключи и резервные копии**:
 
-Sources included for the bundled tools:
-- amneziawg-go b5928efb6ca19f0153958460c3d141f04abc5c2e
-- amneziawg-tools ee0f0a9aa34ff0a0da4b3433b9512781cfe02843
-Built natively on ARM64 using Go 1.27.1 and Debian GCC 10.
-The archive contains no VPN configs, private keys, or manager credentials.
+```sh
+sh /data/awg-native/uninstall.sh --purge
+```
+
+После удаления обновите страницу UniFi. Если системные файлы были изменены обновлением или другой модификацией, автоматическое удаление остановится, чтобы не перезаписать неизвестную версию.
+
+## Исходники и компоненты
+
+`AmneziaWG-UniFi-v0.2.0-source.tar.gz` содержит код интеграции, установщик, движки, исходники движков и уведомления о лицензиях. Оригинальные файлы интерфейса UniFi в пакет не включены: изменения применяются локально к установленной системе.
+
+- amneziawg-go: `b5928efb6ca19f0153958460c3d141f04abc5c2e`.
+- amneziawg-tools: `ee0f0a9aa34ff0a0da4b3433b9512781cfe02843`.
+
+Проект не связан с Ubiquiti и не поддерживается ею.
