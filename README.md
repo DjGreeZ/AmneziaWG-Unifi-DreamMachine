@@ -61,7 +61,7 @@ curl -fL https://raw.githubusercontent.com/DjGreeZ/AmneziaWG-Unifi-DreamMachine/
 
 ## Использование
 
-1. Откройте обычную панель [UniFi Site Manager](https://unifi.ui.com) или по прямому IP.
+1. Откройте обычную панель по прямому IP. [Облачная панель unifi.ui.com не позволяет отображать измененный интерфейс]
 2. Перейдите в **Settings → VPN → VPN Client → Create New**.
 3. Выберите **AmneziaWG**, задайте имя и загрузите оригинальный native AWG-файл `.conf`. Manual пока не поддерживается!
 4. Нажмите **Create** и дождитесь проверки подключения.
